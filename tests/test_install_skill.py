@@ -236,6 +236,10 @@ class InstallSkillTests(unittest.TestCase):
     def test_skill_folder_carries_the_same_version_as_the_repository(self):
         version = (install_skill.REPO / "VERSION").read_text()
         self.assertEqual((install_skill.SKILL_DIR / "VERSION").read_text(), version)
+        # The skill folder is what skills.sh, the plugin and npx copy: it carries the licence too.
+        self.assertEqual(
+            (install_skill.SKILL_DIR / "LICENSE").read_text(), (install_skill.REPO / "LICENSE").read_text()
+        )
         plugin = json.loads((install_skill.REPO / ".claude-plugin" / "plugin.json").read_text())
         self.assertEqual(plugin["version"], version.strip())
         package = json.loads((install_skill.REPO / "package.json").read_text())

@@ -4,6 +4,9 @@ All notable changes to this project. Format: [Keep a Changelog](https://keepacha
 
 ## [Unreleased]
 
+### Added
+- The skill folder carries its own `LICENSE`, so a copy installed by `npx`, the plugin or `npx skills add` includes it.
+
 ## [0.3.0] - 2026-11-19
 
 ### Added
