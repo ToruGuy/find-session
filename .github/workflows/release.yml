@@ -1,0 +1,179 @@
+name: release
+
+# A pushed tag vX.Y.Z builds and publishes that version. Started by hand
+# (workflow_dispatch) it is a dry run: same checks and builds, nothing published.
+# Registries are opt-in, see docs/RELEASING.md:
+#   npm   repository variable NPM_PUBLISH=true (trusted publishing, or an NPM_TOKEN secret)
+#   PyPI  repository variable PYPI_PROJECT=<distribution name> (trusted publishing)
+on:
+  push:
+    tags: ["v*.*.*"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      publish: ${{ steps.version.outputs.publish }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Tag matches every version file and has a changelog section
+        id: version
+        env:
+          EVENT: ${{ github.event_name }}
+          REF_TYPE: ${{ github.ref_type }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          if [ "$EVENT" = push ] && [ "$REF_TYPE" = tag ]; then
+            version=$(python3 scripts/release.py --check "$TAG")
+            publish=true
+          else
+            version=$(cat VERSION)
+            python3 scripts/release.py --check "v$version"
+            publish=false
+            echo "::notice title=Dry run::Started by hand: checks and builds v$version, creates no release and publishes nothing."
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "publish=$publish" >> "$GITHUB_OUTPUT"
+      - name: Registries that will be used
+        env:
+          NPM_PUBLISH: ${{ vars.NPM_PUBLISH }}
+          PYPI_PROJECT: ${{ vars.PYPI_PROJECT }}
+        run: |
+          if [ "$NPM_PUBLISH" = true ]; then
+            echo "npm: will publish"
+          else
+            echo "::notice title=npm skipped::Repository variable NPM_PUBLISH is not 'true'. The npm tarball is attached to the GitHub Release only. See docs/RELEASING.md."
+          fi
+          if [ -n "$PYPI_PROJECT" ]; then
+            # Fail before anything is released when the variable and pyproject.toml disagree.
+            python3 - <<'EOF'
+          import os, re, tomllib
+          normal = lambda name: re.sub(r"[-_.]+", "-", name).lower()
+          built = tomllib.load(open("pyproject.toml", "rb"))["project"]["name"]
+          wanted = os.environ["PYPI_PROJECT"]
+          if normal(built) != normal(wanted):
+              raise SystemExit(f"::error::PYPI_PROJECT is {wanted!r} but pyproject.toml builds {built!r}: change [project] name first.")
+          print(f"PyPI: will publish {built}")
+          EOF
+          else
+            echo "::notice title=PyPI skipped::Repository variable PYPI_PROJECT is not set. The Python packages are attached to the GitHub Release only. See docs/RELEASING.md."
+          fi
+
+  checks:
+    needs: verify
+    uses: ./.github/workflows/tests.yml
+
+  build:
+    needs: [verify, checks]
+    runs-on: ubuntu-latest
+    env:
+      VERSION: ${{ needs.verify.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+      # npm first: the Python build leaves an egg-info in the skill folder (package.json excludes it anyway).
+      - run: mkdir npm-dist && npm pack --pack-destination npm-dist
+      - run: uv build --out-dir python-dist
+      - name: Artifacts carry the tagged version
+        run: |
+          ls -l npm-dist python-dist
+          test -f "npm-dist/find-session-$VERSION.tgz"
+          ls python-dist/*-"$VERSION".tar.gz python-dist/*-"$VERSION"-py3-none-any.whl
+      - uses: actions/upload-artifact@v4
+        with:
+          name: npm-dist
+          path: npm-dist/
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v4
+        with:
+          name: python-dist
+          path: python-dist/
+          if-no-files-found: error
+
+  github-release:
+    needs: [verify, build]
+    if: needs.verify.outputs.publish == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+      - name: Create the GitHub Release with the changelog section as notes
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+          VERSION: ${{ needs.verify.outputs.version }}
+        run: |
+          python3 scripts/release.py --notes "$VERSION" > "$RUNNER_TEMP/notes.md"
+          if gh release view "$TAG" > /dev/null 2>&1; then
+            # A re-run: refresh the files, keep the release.
+            gh release upload "$TAG" dist/* --clobber
+          else
+            gh release create "$TAG" dist/* --title "$TAG" --notes-file "$RUNNER_TEMP/notes.md" --verify-tag
+          fi
+
+  npm:
+    needs: [verify, github-release]
+    if: needs.verify.outputs.publish == 'true' && vars.NPM_PUBLISH == 'true'
+    runs-on: ubuntu-latest
+    environment: npm
+    permissions:
+      contents: read
+      id-token: write # trusted publishing and provenance
+    steps:
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+      - name: npm 11.5.1 or newer (needed for trusted publishing)
+        run: |
+          npm --version
+          node -e 'const [a,b,c]=process.argv[1].split(".").map(Number); process.exit(a>11||(a===11&&(b>5||(b===5&&c>=1)))?0:1)' "$(npm --version)" || npm install -g npm@11
+      - uses: actions/download-artifact@v4
+        with:
+          name: npm-dist
+          path: npm-dist
+      - name: Publish
+        env:
+          VERSION: ${{ needs.verify.outputs.version }}
+          # Optional: only needed until the trusted publisher is set up on npmjs.com.
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          if [ -n "$NPM_TOKEN" ]; then
+            echo "Publishing with the NPM_TOKEN secret"
+            printf '//registry.npmjs.org/:_authToken=%s\n' "$NPM_TOKEN" > "$HOME/.npmrc"
+          else
+            echo "Publishing with npm trusted publishing (OIDC)"
+          fi
+          npm publish "npm-dist/find-session-$VERSION.tgz" --access public --provenance
+
+  pypi:
+    needs: [verify, github-release]
+    if: needs.verify.outputs.publish == 'true' && vars.PYPI_PROJECT != ''
+    runs-on: ubuntu-latest
+    environment:
+      name: pypi
+      url: https://pypi.org/p/${{ vars.PYPI_PROJECT }}
+    permissions:
+      id-token: write # trusted publishing
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: python-dist
+          path: dist
+      - uses: pypa/gh-action-pypi-publish@release/v1

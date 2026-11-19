@@ -1,0 +1,49 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+# Distribution name on PyPI only: the command (`find-session`) and the import
+# package (`find_session`) stay the same whatever this is ("find-session" itself
+# is taken there by another project). The release workflow publishes when the
+# repository variable PYPI_PROJECT equals this name; to rename, change this one
+# line and the variable (see docs/RELEASING.md).
+name = "find-session-cli"
+description = "Search for agents over past Claude Code, Codex and omp conversations: results point at the messages to read"
+readme = "README.md"
+license = { text = "MIT" }
+requires-python = ">=3.9"
+dependencies = []
+dynamic = ["version"]
+keywords = ["claude-code", "codex", "agents", "history", "search"]
+classifiers = [
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Environment :: Console",
+]
+
+[project.scripts]
+find-session = "find_session.cli:main"
+
+[tool.setuptools]
+packages = ["find_session", "find_session.parsers"]
+package-dir = { "" = "skills/find-session/scripts" }
+
+[tool.setuptools.dynamic]
+version = { file = "VERSION" }
+
+[tool.ruff]
+line-length = 120
+src = ["skills/find-session/scripts", "tests"]
+target-version = "py39"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP"]
+ignore = ["E501", "UP006", "UP007", "UP035", "UP045"]
+
+[tool.ruff.lint.isort]
+# tests/helpers.py puts the package on sys.path, so it has to be imported first.
+section-order = ["future", "standard-library", "third-party", "test-setup", "first-party", "local-folder"]
+
+[tool.ruff.lint.isort.sections]
+test-setup = ["helpers"]

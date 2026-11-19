@@ -1,0 +1,57 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 560" width="1200" height="560" role="img" aria-label="You mention earlier work; the agent searches the history of Claude Code, Codex and omp and gets a short result that points at the messages to read">
+  <style>
+    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 14px; }
+    .sans { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; }
+    .dim { fill: #8b949e; } .txt { fill: #e6edf3; } .acc { fill: #7ee787; } .key { fill: #79c0ff; } .hit { fill: #f2cc60; }
+  </style>
+  <rect width="1200" height="560" rx="18" fill="#0d1117"/>
+
+  <!-- sources -->
+  <text x="48" y="62" class="sans dim" font-size="14" letter-spacing="1.5">YOUR HISTORY</text>
+  <g class="sans" font-size="17" font-weight="600">
+    <rect x="48" y="84" width="226" height="64" rx="12" fill="#161b22" stroke="#30363d"/>
+    <text x="68" y="112" class="txt">Claude Code</text>
+    <text x="68" y="134" class="dim mono" font-size="12" font-weight="400">~/.claude/projects</text>
+    <rect x="48" y="164" width="226" height="64" rx="12" fill="#161b22" stroke="#30363d"/>
+    <text x="68" y="192" class="txt">Codex</text>
+    <text x="68" y="214" class="dim mono" font-size="12" font-weight="400">~/.codex/sessions</text>
+    <rect x="48" y="244" width="226" height="64" rx="12" fill="#161b22" stroke="#30363d"/>
+    <text x="68" y="272" class="txt">omp</text>
+    <text x="68" y="294" class="dim mono" font-size="12" font-weight="400">~/.omp/agent/sessions</text>
+  </g>
+  <g stroke="#30363d" stroke-width="2" fill="none">
+    <path d="M274 116 H296 V196 H318"/><path d="M274 196 H318"/><path d="M274 276 H296 V196"/>
+  </g>
+  <path d="M318 196 l-9 -6 v12 z" fill="#30363d"/>
+
+  <!-- what is kept -->
+  <text x="48" y="364" class="sans dim" font-size="14" letter-spacing="1.5">INDEXED</text>
+  <g class="sans" font-size="15">
+    <text x="48" y="392" class="txt"><tspan class="acc">✓</tspan> what was said</text>
+    <text x="48" y="418" class="txt"><tspan class="acc">✓</tspan> commands that were run</text>
+    <text x="48" y="456" class="dim">✕ tool output, file bodies</text>
+    <text x="48" y="482" class="dim">✕ reasoning, injected context</text>
+    <text x="48" y="508" class="dim">✕ secrets → [REDACTED]</text>
+  </g>
+
+  <!-- terminal -->
+  <rect x="330" y="40" width="822" height="480" rx="14" fill="#161b22" stroke="#30363d"/>
+  <circle cx="356" cy="64" r="6" fill="#ff5f57"/><circle cx="376" cy="64" r="6" fill="#febc2e"/><circle cx="396" cy="64" r="6" fill="#28c840"/>
+  <text id="request" x="741" y="69" text-anchor="middle" class="sans dim" font-size="13">you: <tspan class="txt">“We built the invoice export before. What did we decide?”</tspan> → the agent runs:</text>
+  <line x1="330" y1="88" x2="1152" y2="88" stroke="#30363d"/>
+  <g class="mono" id="terminal" xml:space="preserve">
+    <text x="356" y="122"><tspan class="acc">$</tspan><tspan class="txt"> npx find-session search </tspan><tspan class="key">"invoice export"</tspan></text>
+    <text x="356" y="158" class="dim">search "invoice export": Claude 1, Codex 1, omp 0</text>
+    <text x="356" y="182" class="dim">inspect: npx find-session inspect SELECTOR [--range A:B]  (also prints the resume command)</text>
+    <text x="356" y="218" class="txt">Claude</text>
+    <text x="356" y="242"><tspan class="key">claude:0b7c2f1e</tspan><tspan class="dim"> 2026-09-22 10:00 ~/projects/shop · 214 msgs</tspan></text>
+    <text x="356" y="266" class="txt"> title: CSV export for invoices</text>
+    <text x="356" y="290"><tspan class="hit"> hit 12:19</tspan><tspan class="txt"> agent: The invoice export now writes one row per line item.</tspan></text>
+    <text x="356" y="326" class="txt">Codex</text>
+    <text x="356" y="350"><tspan class="key">codex:019a1aae</tspan><tspan class="dim"> 2026-09-20 16:41 ~/projects/shop · 6 msgs</tspan></text>
+    <text x="356" y="374" class="txt"> first: Why does the invoice export skip refunds?</text>
+    <text x="356" y="418"><tspan class="acc">$</tspan><tspan class="txt"> npx find-session inspect </tspan><tspan class="key">claude:0b7c2f1e</tspan><tspan class="hit"> --range 12:19</tspan></text>
+  </g>
+  <rect x="356" y="440" width="770" height="54" rx="10" fill="#0d1117" stroke="#30363d"/>
+  <text id="caption" x="376" y="473" class="sans txt" font-size="16">The agent reads <tspan class="hit" font-weight="700">8 messages</tspan>, not all <tspan font-weight="700">214</tspan>: the stretch where the words occur together.</text>
+</svg>

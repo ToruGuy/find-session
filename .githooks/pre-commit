@@ -1,0 +1,9 @@
+#!/bin/sh
+# Soft versioning nudge — warn, never block.
+staged=$(git diff --cached --name-only)
+code=$(printf '%s\n' "$staged" | grep -E '\.(py|js)$' | grep -v -E '(^|/)test_|\.test\.js$' || true)
+touched_changelog=$(printf '%s\n' "$staged" | grep -c 'CHANGELOG.md' || true)
+if [ -n "$code" ] && [ "$touched_changelog" -eq 0 ]; then
+  printf '\033[33mversioning:\033[0m code changed but CHANGELOG.md not updated. Add an [Unreleased] line (do not bump VERSION on a branch). (soft warning, commit proceeds)\n' >&2
+fi
+exit 0

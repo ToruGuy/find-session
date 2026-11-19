@@ -1,0 +1,107 @@
+# Changelog
+
+All notable changes to this project. Format: [Keep a Changelog](https://keepachangelog.com); scheme: SemVer.
+
+## [Unreleased]
+
+## [0.3.0] - 2026-11-19
+
+### Added
+- **One-command install.** `npx find-session install` copies the skill to `~/.local/share/find-session`, links it into every tool found on the machine (Claude Code, Codex, omp), shows how many sessions each has and indexes the history. `npx find-session@latest update` refreshes it, `npx find-session uninstall` removes what it created and the search index, and every other command (`npx find-session search …`) runs the helper. Needs Node 18+ for the installer and Python 3.9+; no npm dependencies.
+- **More ways to install.** The repository is a Claude Code plugin and marketplace, works with `npx skills add ToruGuy/find-session`, and the skill is one self-contained folder (`skills/find-session/`) that can be copied anywhere. `uv tool install` / `pipx install` give a `find-session` command (`python3 -m find_session` works too). The installers recognise a find-session installed another way and keep it instead of adding a second copy, so the routes can be mixed in any order.
+- **Session titles.** A result row shows ` title:` (Claude Code's generated or `/rename`d title, a Codex thread name, an omp title) instead of ` first:` when the session has one; `--full` and `inspect` print a `Title:` line, `--json` has a `title` key, `recent` a `- title:` line, `index` uses it in its last column. Titles are redacted like all text and are only shown: they are not searched and do not change the ranking.
+- **The session you are searching from is left out of the ranking and the counts**, because an agent names its topic before it searches and its own session would often come first. When it matches, one line points at it (`this session also matches: claude:0b7c2f1e hit 3:9`); `--include-current` ranks it as before and `--json` has it under `current_session`. It is recognised by `CLAUDE_CODE_SESSION_ID` (Claude Code; a subagent's is its parent session) or `CODEX_THREAD_ID` / `CODEX_SESSION_ID` (Codex). Under omp, in a plain terminal, or when ids of both tools are set, nothing is left out.
+- **The header says how good the matches are.** A session is listed when it has any of the query words; the header now counts the sessions that have all of them and, apart, those with only some (`Claude 4 (+31 partial)`), and names a word that no session has (`no session has: WORD`). `--json` adds `counts_all_words` and `words_not_found`; `counts` is unchanged. `search --help`, the README and the skill describe how words are matched.
+- **The first indexing run is visible and can be interrupted.** When parsing takes more than two seconds, progress lines go to stderr (`indexing your history, 600/2000 session files …`), never to stdout. What is parsed is saved every 100 sessions or 5 seconds, so a run cut off by Ctrl-C or an agent's command timeout continues on the next run. Both installers index the history at the end (`--no-index` skips it), and `build-index` does it on request. `FIND_SESSION_PROGRESS` sets the delay or turns the lines off.
+- **Claude Code subagents are searchable.** The transcripts Claude Code keeps under `<session>/subagents/` (the task a subagent was given, what it said and ran, the report it sent back) are indexed like Codex and omp subagents: out of the main rankings, counted in the header (`N more in subagents`), ranked with `--children`, read with `inspect claude:<agent id>`, and listed under their parent session by `inspect`. A copy of a subagent file in a forked session is the same subagent, not a second one.
+- **Diacritics do not matter.** `wdrozenie` finds `wdrożenie` and the other way round, in messages, commands, the project path, `--project` and `inspect --grep`. Results still print the text as it was written.
+- `index` takes `--limit N` and `--since WHEN`; `sources` counts Codex review threads apart and says when there is no config file.
+- `docs/REFERENCE.md` holds the detail that used to be in the README: how words are matched, how to read a result, the session you are in, configuration, installer options and how the index works.
+- Hints where a command used to say only that nothing was found: no history at all (`sources` shows where it is read from), an `inspect --range` past the end (how far the numbers go), a session that is not found.
+- **Words far into a long command are found and shown.** Only the first 400 characters of a command were kept, so a step late in a chained one-liner could be neither searched nor read (a trial with fresh agents lost a deploy command that way). Now the first 2,000 characters are stored and searched; in a real history 94% of commands are shorter, and most longer ones are inline scripts. The first 400 characters count in the ranking as before. A word found only further in lists the session, moves the hit to that command and counts for a quarter of a word: counted in full, long scripts pushed the session that was opened down in 4 of 70 logged searches. `inspect --tools` prints 400 characters of each command (around the word when `--grep` found it further in), `--message-chars 0` all that is stored, and what is not printed is counted: `… [+812 chars]`. Cost, measured on 2,751 session files with old and new run alternately: the index grows from 93 to 128 MB, the first indexing takes as long as before (117 s; 109 and 125 s before), the median warm search of 10 logged queries goes from 239 to 294 ms.
+- `search` takes its words with or without quotes: `search invoice export` is `search "invoice export"`, also with an option between the words.
+
+### Changed
+- The README is rewritten for a first-time reader and is about a quarter shorter: what the tool is for, the install command, a search result and the `inspect --range` that reads it (both checked against real output by a test), then how an agent uses it, what is indexed, privacy, install routes and commands. The picture shows the request that starts a search. The one-line descriptions of the npm package, the Python package, the plugin and the skill say the same thing.
+- **BREAKING:** the skill moved from the repository root into `skills/find-session/`. After updating a clone, run `scripts/install_skill.py` again: it moves links from the old layout.
+- **BREAKING:** `scripts/install_skill.py` links only the tools that exist on the machine, like the npx installer (it used to create `~/.omp` and the others for everyone); `--harness` links a tool that is not there. It then shows the sources and indexes the history.
+- **BREAKING:** the cache is a different file. It is now an index in one SQLite file (`~/.cache/find-session/index-*.sqlite3`); the old cache files are deleted on the first run and the history is indexed once more (about a minute and a half for 7 GB on a laptop). The index is larger than the old cache (70 MB against 48 MB on 4.6 GB of history), because it also keeps the lower-case search text.
+- Searches and `inspect` are several times faster, with the same results. A search reads a few facts per session and the stored text and loads a conversation only when it prints it. Measured on 2,091 session files, old and new run alternately: the median of 20 logged queries went from 0.77 s to 0.20 s, `inspect` from 0.25 s to 0.05 s. A session file that has only grown (the conversation you are in) is read from where the previous search stopped: a search right after a 30 MB file grew went from 2.3 s to 0.3 s.
+- The default output is shorter. Rows no longer print ` last:` (the last user message), a `hit` line is printed whenever the title or first message does not show the query words, and is not printed again when it would repeat the line above. Hit, title and first lines end on whole words instead of in the middle of one. Measured on 10 logged queries over 1,713 sessions, dropping ` last:` and adding titles took the average search from 3,583 to 2,713 characters; the later changes took off about 1% more.
+- A command that looked something up in the history is left out of the index whichever way this tool was called (`sessions.py`, `find-session`, `npx find-session`, `python3 -m find_session`), so a session that only searched for a topic no longer ranks for it. Commands that merely mention a `find-session/` directory are searchable again.
+- More secrets are redacted: AWS secret access keys that stand next to their name or their key id, and passwords with up to three words between the keyword and a colon (`hasło do serwera: …`, `password for the panel: …`). Sentences that only talk about passwords are left as they are; an AWS secret key pasted with nothing around it is still not recognised.
+- Help texts say what every command and option does; usage and error lines name the program as it was started (`find-session`, `sessions.py`, `npx find-session`). `brief-input`, the old name of `recent`, still works and is no longer listed.
+- `inspect` lists the sessions an ambiguous Codex id fits by the id that `search` prints. JSON `modified` carries the UTC offset, like `started`.
+- **BREAKING:** `index` prints the newest 50 sessions, not all of them, in a compact form whose rows start with a selector for `inspect` (`claude:0b7c2f1e 2026-09-22 10:00 ~/projects/shop · 214 msgs · title`). On a history of 1,700 sessions the default output went from 280 KB to 7 KB. `--limit 0` lists everything; `--out FILE` still writes everything.
+- **A word of up to three characters matches only as a whole word.** `api` finds `API` and `api-v2`, no longer `capital` or `rapid`; on a real history one three-letter name matched 580 of 964 Claude Code sessions before and 2 after. Longer words are found inside other words as before.
+- **A session's date is the time of its last record, not the file's modification time.** A history copied or synced from another machine keeps its real dates, and `--since` / `--until` / `recent` work on it. A file without timestamps keeps the file's time.
+- `recent` is lighter: 20 sessions by default instead of 30, requests cut at 240 characters and answers at 400 (at a word), and it says when it left sessions out. On a real history the default went from 37 KB to 16 KB.
+- More secrets are redacted: the `-p` password of login commands (`docker login`, `podman login`, `helm registry login`, `mongosh` and relatives), `curl -u user:password`, and a secret told in a sentence ("the password for staging is …", "hasło do serwera to …", "the secret is …", "token to …") when the value looks like one. Ordinary sentences with the same words are kept; the README says exactly what is recognised.
+- The index is rebuilt once after this update (the stored text and the dates changed).
+- **`inspect` prints about 20,000 characters at most by default (was 40,000)**, about what an agent's tool still shows inline: Claude Code moved a 30,000-character result to a file, and reading it cost two more calls. When messages are left out, the note names them and gives the call for the next part with the same options (`Next part: inspect claude:0b7c2f1e --range 13:27 --tools, then from 28`); that part fits the limit. `--budget N` sets another limit, 0 none.
+- **The hit line shows why a session matched.** It quotes the message of the hit stretch with the most query words, as before, and among messages with equally many the one whose words fewer sessions have, cut around the words that stand close together. A line that only repeated the word every result contains made an agent pass over the right session. The quote is at most 96 characters (was 100): placed around the words it is cut at its full width more often, and a search must not print more than it did.
+- An option typed on the wrong command is answered in one line that names the call (`--tools is an option of inspect, not of search: sessions.py inspect SELECTOR --range A:B --tools`; `--no-cache goes before the command: …`), without the usage text; `--source Claude` is taken in any case.
+- The skill's description names questions about past actions ("which command did we use", "how did we do X last time", "run it again like before") and says to use the skill before grepping session folders; SKILL.md says to judge a result by its hit line, to use `--tools` together with `--range` or `--grep`, and to add `--children` only after the main results did not answer (agents added it to their first search out of habit).
+- An interrupted first run says how far it got (`stopped after 718 of 2082 session files`) instead of `index ready`; a list of sessions an ambiguous id fits says how many more there are when it is cut at 50; `inspect` names at most 20 subagents of a session (`--json` has all).
+- The Python distribution is named `find-session-cli` (`find-session` is taken on PyPI by another project); the command stays `find-session` and the import package `find_session`.
+
+### Fixed
+- **A conversation stored in two project folders could not be opened.** A session continued from another directory is written there again under the same id; `inspect` answered `Ambiguous selector` with two identical choices, so no selector worked. It now opens the copy whose last record is the latest and names the other file in one line (`2 copies of this session; showing the one written last: …`); `search`, `index` and `recent` list the conversation once. A list of choices for an ambiguous id never names a session twice.
+- `npx find-session uninstall` deletes the search index. It looked for the file names of the old cache, left the index (a copy of the conversation text) in place and reported its files as "not ours".
+- `npx find-session install` or `update` run from an older package in npm's cache no longer replaces a newer installed copy; it says which version is installed and how to get the newest.
+- The paste-in prompt for agents and the clone instructions no longer fail with a git error after an npx install: a clone has its own folder, and each installer keeps what the other one set up.
+- The install summary and `sources` counted every Codex file as a session (`1118 sessions, 0 subagents`); they now tell sessions, subagents and review threads apart (`770 sessions, 338 subagents, 10 review threads`).
+- `npx find-session install` and `scripts/install_skill.py` no longer link a second copy next to find-session installed as a Claude Code plugin (for the user, and not switched off): the plugin is kept, like any other install.
+- Claude Code's copies of what it sent to the model (`api-request-blob` records) were read as messages of the conversation: they repeated text, took message numbers and could carry instructions files into the index. They are skipped.
+- A result line no longer cuts a path in the middle of a folder name (`…ts/report.py`): a long path is cut between two of its parts.
+- The paste-in prompt for agents falls back to the clone when the npx command fails for any reason, not only when Node is missing.
+- `--harness claude` no longer reports the other tools as "not found".
+- Several agents starting a search at the same moment no longer lose the freshly parsed sessions to a "database is locked" error.
+- Run directly on a Python older than 3.9, the helper prints one line and exits with code 3 instead of a traceback.
+- Output piped into a reader that stops early (`… | head`) ends quietly instead of with a `BrokenPipeError`.
+- Installed as a Claude Code plugin, the npx installer is no longer offered to Claude Code as a command (it moved from `bin/` to `npm/`).
+
+## [0.2.1] - 2026-11-13
+
+### Fixed
+- `inspect` prints the configured `resume_label` and `hints` (filled in for that session); the compact search output only lists the hint templates.
+- omp subagent selectors (`omp:<parent>/<Task>`) are no longer shortened in the compact output, so they work with `inspect` as printed.
+- Names made of words and numbers (`InvoiceExport2026Final`) are no longer mistaken for random secrets; the cache is rebuilt once.
+- Test fixtures use only invented ids and hashes.
+
+## [0.2.0] - 2026-11-13
+
+### Added
+- Commands from tool calls are searchable: the shell command (or the path, pattern or URL argument) of every Claude Code, Codex and omp tool call, never its output, file bodies written by a tool, or patch contents. Lookups in the history itself (`sessions.py search`, reading session files) are left out, so a session that searched for a topic does not rank for it. `inspect --tools` shows the commands under the message they followed; message numbers do not change.
+- Secret-looking text (assignments such as `API_KEY=…`, `Authorization`/`Bearer` values, passwords in URLs, in command options and right after the word "password" or Polish "hasło" (`hasło: …`, `hasło to …`), private keys, well-known token formats, long random strings) is replaced with `[REDACTED]` before anything is cached or printed, in commands and in conversation text alike. References such as `$TOKEN` or `$(command)`, ids, hashes and paths stay searchable.
+- Long conversations are ranked by their best stretch of 8 consecutive messages, so a session where the query words occur together beats one that mentions each of them once, hundreds of messages apart. Each result names that stretch (`hit 120:127`, JSON `chunk`) for `inspect --range`.
+- `search --full`: the previous, longer output with full ids and a resume and inspect command per result.
+- Private cache of extracted conversation text (`~/.cache/find-session`, mode 0600): only changed session files are parsed again, so a search over thousands of sessions drops from tens of seconds to under a second. `--no-cache` / `FIND_SESSION_CACHE=off` turn it off.
+
+- `inspect --tail N`, `--range A:B`, `--grep WORDS`, `--message-chars N` and `--budget N`: read exactly the part of a long conversation you need.
+- `search --since/--until` (`today`, `yesterday`, `3d`, `12h`, `2w`, a date or date and time) and `--project TEXT` (`.` = this directory): narrow results without reading raw files.
+- Each search result has a `Match:` line showing the message (number, time, author) where the query words occur, when the start and the last request do not already contain the query words; the header shows when a multi-day session started.
+
+### Changed
+- **BREAKING:** the default search output is compact, for agents: one header with the counts, the helper path printed once, no per-result resume or inspect line, sections without results left out, ids shortened to a unique prefix (`inspect` accepts it and prints the resume command), first and last request cut to 100 characters, and a `hit` line only for long sessions or when the start and the last request do not show the query words. About 45% fewer characters per search than 0.1.0. Use `--full` or `--json` for the previous detail.
+- The cache is stored with Python's `marshal` instead of JSON (about four times faster to read and write), one file per Python version; the unredacted JSON cache of earlier builds is deleted on the next save.
+- `inspect` numbers every message and shows its local time (with a date line when the day changes). When a conversation is longer than the output limit it keeps the first message and the most recent ones and says which numbers were left out, instead of stopping in the middle; a message cut to length says how many characters are missing and how to see them.
+- A prompt recorded twice in a row is shown once.
+- **BREAKING:** Codex subagent sessions and automatic approval-review threads no longer appear in the main Codex ranking; with `--children` they are ranked in a separate `subagents` section (renamed from `omp-children`), and `inspect` of a Codex session lists its subagents. Without `--children` the search says how many subagent sessions containing all the query words it left out, because a detail can occur only in a subagent's answer. `index` and `recent` list main sessions only.
+- Context-compaction summaries ("This session is being continued…") are no longer treated as user messages, so they never show up as `Start` or `Last request` (they stay searchable, since they retell the conversation).
+- Sessions without any conversation text are left out of search results instead of matching on their directory name alone.
+
+### Fixed
+- Codex sessions that copy their parent's history (forks, spawned subagents) were listed under the parent's session id, so `Session:` and the resume command pointed at the wrong conversation.
+- Codex prompts wrapped as `<user_message><context>…</context> prompt</user_message>` lost the user's prompt.
+
+## [0.1.0] - 2026-11-12
+
+### Added
+- `search`: one query over Claude Code, Codex and omp history, ranked separately per source, with text and JSON output.
+- `inspect`: bounded, chronological transcript of one session (user messages and agent answers only); refuses to guess on ambiguous ids.
+- omp support: active branch of the session tree only, cold `.jsonl.gz` archives, named profiles, subagent sessions (`--children`).
+- Ready-to-run hints per result: `Resume` (changes into the session's directory first) and `Inspect` with the absolute helper path.
+- Optional configuration: `FIND_SESSION_HOME`, `FIND_SESSION_CONFIG` and a JSON config with `home`, `resume_label`, extra `hints` and `recent_include`.
+- `recent` (alias `brief-input`), `index` and `sources` commands; `--version`.
+- `scripts/install_skill.py`: links the skill into Claude Code, Codex and omp skill directories, with backups on `--replace`.
