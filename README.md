@@ -5,9 +5,9 @@
 [![npm](https://img.shields.io/npm/v/find-session)](https://www.npmjs.com/package/find-session)
 [![license](https://img.shields.io/github/license/ToruGuy/find-session)](LICENSE)
 
-**Your agent does not remember what you decided yesterday, or what the other tool did.
-`find-session` lets it search your past Claude Code, Codex and omp conversations itself, before it
-asks you again.**
+**Work across Claude Code, Codex and omp, and what you figured out ends up scattered over thousands
+of sessions. `find-session` lets any of the agents search all of them and pull out the messages
+that matter.**
 
 A search tool built for agents, by agents, tested by agents. Local, read-only, pure Python.
 
