@@ -1,0 +1,55 @@
+name: tests
+
+on:
+  push:
+  pull_request:
+  # The release workflow runs the same checks before it builds anything.
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+      - run: uvx ruff check .
+      - run: uvx ruff format --check .
+
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.9", "3.13"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+      # uv fetches the interpreter itself, so old versions keep working on new runner images.
+      - run: uv run --no-project --python ${{ matrix.python-version }} python -m unittest discover -s tests -v
+
+  node:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # The oldest Node the npx wrapper supports (package.json engines) and the current LTS.
+        node-version: ["18", "24"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+      - run: node --test tests/npm/find-session.test.js
+
+  package:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+      # The same code must work installed as a package, not only from a clone.
+      - run: uv tool install .
+      - run: find-session sources
+      - run: test "$(find-session --version)" = "find-session $(cat VERSION)"

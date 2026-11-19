@@ -1,0 +1,10 @@
+version: 2
+updates:
+  # The only dependencies: GitHub Actions in the workflows (Python and npm code have none).
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      actions:
+        patterns: ["*"]

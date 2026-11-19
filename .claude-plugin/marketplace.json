@@ -1,0 +1,14 @@
+{
+  "name": "find-session",
+  "description": "find-session: your agent searches past Claude Code, Codex and omp conversations itself.",
+  "owner": {
+    "name": "ToruAI"
+  },
+  "plugins": [
+    {
+      "name": "find-session",
+      "source": "./",
+      "description": "Lets your agent search past Claude Code, Codex and omp conversations itself and read back only the messages that matter."
+    }
+  ]
+}

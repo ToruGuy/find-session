@@ -1,0 +1,212 @@
+{
+  "about": [
+    "What both installers do, case by case: `npx find-session install` (npm/find-session.js) and",
+    "scripts/install_skill.py. tests/npm/find-session.test.js and tests/test_install_skill.py run every",
+    "case in an empty temporary home and compare the lines the installer prints per tool.",
+    "dirs: directories created first. foreign: a folder holding some other skill. other_install: a",
+    "find-session skill folder (version 9.9.9) put there by another installer. links: link -> target.",
+    "out: the per-tool lines, in order; {skill} is the installer's own skill folder, a trailing * matches",
+    "any ending. linked: tools whose link must point at the installer's own skill afterwards.",
+    "absent: paths that must not exist afterwards. stderr: text the error output must contain.",
+    "plugin: find-session installed as a Claude Code plugin: a skill folder (9.9.9) under `path`/skills and",
+    "an entry in .claude/plugins/installed_plugins.json with that install path and `scope`; `disabled`",
+    "switches it off in .claude/settings.json."
+  ],
+  "cases": [
+    {
+      "name": "only the tools that exist are linked",
+      "dirs": [".claude"],
+      "args": [],
+      "exit": 0,
+      "out": [
+        "claude: linked ~/.claude/skills/find-session",
+        "codex: skipped, Codex not found (add --harness codex to install anyway)",
+        "omp: skipped, omp not found (add --harness omp to install anyway)"
+      ],
+      "linked": ["claude"],
+      "absent": [".codex", ".omp"]
+    },
+    {
+      "name": "all three tools",
+      "dirs": [".claude", ".codex", ".omp"],
+      "args": [],
+      "exit": 0,
+      "out": [
+        "claude: linked ~/.claude/skills/find-session",
+        "codex: linked ~/.codex/skills/find-session",
+        "omp: linked ~/.omp/agent/skills/find-session"
+      ],
+      "linked": ["claude", "codex", "omp"]
+    },
+    {
+      "name": "--harness links a tool that is not there and says why the others are skipped",
+      "dirs": [".claude", ".codex"],
+      "args": ["--harness", "omp"],
+      "exit": 0,
+      "out": [
+        "claude: skipped, not named with --harness",
+        "codex: skipped, not named with --harness",
+        "omp: linked ~/.omp/agent/skills/find-session"
+      ],
+      "linked": ["omp"],
+      "absent": [".claude/skills", ".codex/skills"]
+    },
+    {
+      "name": "--harness given twice",
+      "dirs": [".claude", ".codex", ".omp"],
+      "args": ["--harness", "claude", "--harness", "codex"],
+      "exit": 0,
+      "out": [
+        "claude: linked ~/.claude/skills/find-session",
+        "codex: linked ~/.codex/skills/find-session",
+        "omp: skipped, not named with --harness"
+      ],
+      "linked": ["claude", "codex"],
+      "absent": [".omp/agent/skills"]
+    },
+    {
+      "name": "no tool at all",
+      "dirs": [],
+      "args": [],
+      "exit": 1,
+      "out": [],
+      "stderr": "no Claude Code, Codex or omp directory found (~/.claude, ~/.codex, ~/.omp)",
+      "linked": [],
+      "absent": [".claude", ".codex", ".omp"]
+    },
+    {
+      "name": "--dry-run changes nothing",
+      "dirs": [".claude"],
+      "args": ["--dry-run"],
+      "exit": 0,
+      "out": [
+        "dry-run: claude: would link ~/.claude/skills/find-session -> {skill}",
+        "codex: skipped, Codex not found (add --harness codex to install anyway)",
+        "omp: skipped, omp not found (add --harness omp to install anyway)"
+      ],
+      "linked": [],
+      "absent": [".claude/skills", ".cache"]
+    },
+    {
+      "name": "a different skill with the same name is a conflict",
+      "dirs": [".claude", ".codex"],
+      "foreign": [".claude/skills/find-session"],
+      "args": [],
+      "exit": 1,
+      "out": [
+        "claude: conflict: ~/.claude/skills/find-session is a different skill, kept (use --replace)",
+        "codex: linked ~/.codex/skills/find-session",
+        "omp: skipped, omp not found (add --harness omp to install anyway)"
+      ],
+      "linked": ["codex"]
+    },
+    {
+      "name": "--replace moves the different skill to a backup",
+      "dirs": [".claude"],
+      "foreign": [".claude/skills/find-session"],
+      "args": ["--replace"],
+      "exit": 0,
+      "out": [
+        "claude: linked, previous one moved to ~/.claude/skill-backups/find-session-*",
+        "codex: skipped, Codex not found (add --harness codex to install anyway)",
+        "omp: skipped, omp not found (add --harness omp to install anyway)"
+      ],
+      "linked": ["claude"]
+    },
+    {
+      "name": "a find-session installed another way is kept, not a conflict",
+      "dirs": [".claude", ".codex"],
+      "other_install": "src/find-session/skills/find-session",
+      "links": { ".claude/skills/find-session": "src/find-session/skills/find-session" },
+      "args": [],
+      "exit": 0,
+      "out": [
+        "claude: kept, already installed from ~/src/find-session/skills/find-session (9.9.9); --replace links this one instead",
+        "codex: linked ~/.codex/skills/find-session",
+        "omp: skipped, omp not found (add --harness omp to install anyway)"
+      ],
+      "linked": ["codex"]
+    },
+    {
+      "name": "--replace takes over from the other install",
+      "dirs": [".claude"],
+      "other_install": "src/find-session/skills/find-session",
+      "links": { ".claude/skills/find-session": "src/find-session/skills/find-session" },
+      "args": ["--replace"],
+      "exit": 0,
+      "out": [
+        "claude: linked, previous one moved to ~/.claude/skill-backups/find-session-*",
+        "codex: skipped, Codex not found (add --harness codex to install anyway)",
+        "omp: skipped, omp not found (add --harness omp to install anyway)"
+      ],
+      "linked": ["claude"]
+    },
+    {
+      "name": "a skills.sh install that Codex already reads is not doubled",
+      "dirs": [".codex"],
+      "other_install": ".agents/skills/find-session",
+      "args": [],
+      "exit": 0,
+      "out": [
+        "claude: skipped, Claude Code not found (add --harness claude to install anyway)",
+        "codex: kept, already installed from ~/.agents/skills/find-session (9.9.9); --replace links this one instead",
+        "omp: skipped, omp not found (add --harness omp to install anyway)"
+      ],
+      "linked": [],
+      "absent": [".codex/skills"]
+    },
+    {
+      "name": "a Claude Code plugin install is not doubled",
+      "dirs": [".claude"],
+      "plugin": { "path": ".claude/plugins/cache/find-session/find-session/9.9.9", "scope": "user" },
+      "args": [],
+      "exit": 0,
+      "out": [
+        "claude: kept, already installed from ~/.claude/plugins/cache/find-session/find-session/9.9.9/skills/find-session (9.9.9); --replace links this one instead",
+        "codex: skipped, Codex not found (add --harness codex to install anyway)",
+        "omp: skipped, omp not found (add --harness omp to install anyway)"
+      ],
+      "linked": [],
+      "absent": [".claude/skills", ".local/share/find-session"]
+    },
+    {
+      "name": "--replace links next to the plugin when asked to",
+      "dirs": [".claude"],
+      "plugin": { "path": ".claude/plugins/cache/find-session/find-session/9.9.9", "scope": "user" },
+      "args": ["--replace"],
+      "exit": 0,
+      "out": [
+        "claude: linked ~/.claude/skills/find-session",
+        "codex: skipped, Codex not found (add --harness codex to install anyway)",
+        "omp: skipped, omp not found (add --harness omp to install anyway)"
+      ],
+      "linked": ["claude"]
+    },
+    {
+      "name": "a plugin that is switched off does not count",
+      "dirs": [".claude"],
+      "plugin": { "path": ".claude/plugins/cache/find-session/find-session/9.9.9", "scope": "user", "disabled": true },
+      "args": [],
+      "exit": 0,
+      "out": [
+        "claude: linked ~/.claude/skills/find-session",
+        "codex: skipped, Codex not found (add --harness codex to install anyway)",
+        "omp: skipped, omp not found (add --harness omp to install anyway)"
+      ],
+      "linked": ["claude"]
+    },
+    {
+      "name": "a plugin installed for one project does not count",
+      "dirs": [".claude"],
+      "plugin": { "path": ".claude/plugins/cache/find-session/find-session/9.9.9", "scope": "project" },
+      "args": [],
+      "exit": 0,
+      "out": [
+        "claude: linked ~/.claude/skills/find-session",
+        "codex: skipped, Codex not found (add --harness codex to install anyway)",
+        "omp: skipped, omp not found (add --harness omp to install anyway)"
+      ],
+      "linked": ["claude"]
+    }
+  ]
+}
