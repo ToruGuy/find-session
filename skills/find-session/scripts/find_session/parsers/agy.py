@@ -22,8 +22,9 @@ from ..text import clean_assistant_text, clean_user_text, short_project
 from ..tools import tool_text
 
 # The user's own words; agy wraps them with metadata it adds itself
-# (<ADDITIONAL_METADATA>, <USER_SETTINGS_CHANGE>).
-USER_REQUEST = re.compile(r"<USER_REQUEST>\s*(.*?)\s*</USER_REQUEST>", re.S)
+# (<ADDITIONAL_METADATA>, <USER_SETTINGS_CHANGE>). In `transcript.jsonl` a long
+# request is cut short before its closing tag.
+USER_REQUEST = re.compile(r"<USER_REQUEST>\s*(.*?)\s*(?:</USER_REQUEST>|\Z)", re.S)
 
 # agy's argument names -> the names `tools.tool_text` knows. Anything else
 # (file bodies, replacement chunks, timeouts) is left out.

@@ -97,6 +97,8 @@ class AgyParseTests(AgyCase):
         self.assertTrue(candidate.location.endswith("/transcript.jsonl"))
         session = agy.parse_agy(candidate.path)
         self.assertEqual([text for _, text in session.tools], ["$ AGYSHORTCMD --x"])
+        # A request cut short before its closing tag is kept.
+        self.assertEqual(agy.agy_user_text("<USER_REQUEST>\nPlan the AGYTOPIC roll"), "Plan the AGYTOPIC roll")
 
     def test_conversations_without_a_transcript_or_a_row_and_stray_files(self):
         (self.home / AGY_ROOT / "brain" / OTHER).mkdir(parents=True)
