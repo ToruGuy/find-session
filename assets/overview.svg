@@ -41,7 +41,7 @@
   <line x1="330" y1="88" x2="1152" y2="88" stroke="#30363d"/>
   <g class="mono" id="terminal" xml:space="preserve">
     <text x="356" y="122"><tspan class="acc">$</tspan><tspan class="txt"> npx find-session search </tspan><tspan class="key">"invoice export"</tspan></text>
-    <text x="356" y="158" class="dim">search "invoice export": Claude 1, Codex 1, omp 0</text>
+    <text x="356" y="158" class="dim">search "invoice export": Claude 1, Codex 1, omp 0, agy 0</text>
     <text x="356" y="182" class="dim">inspect: npx find-session inspect SELECTOR [--range A:B]  (also prints the resume command)</text>
     <text x="356" y="218" class="txt">Claude</text>
     <text x="356" y="242"><tspan class="key">claude:0b7c2f1e</tspan><tspan class="dim"> 2026-09-22 10:00 ~/projects/shop · 214 msgs</tspan></text>

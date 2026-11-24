@@ -33,6 +33,10 @@ def parse_candidate(candidate: Candidate, *, first_only: bool = False, resume: S
             parent_id=candidate.parent_id,
             stop_after_first_user=first_only,
         )
+    elif candidate.source == "agy":
+        from .parsers.agy import parse_agy
+
+        session = parse_agy(candidate.path, session_id=candidate.session_id, stop_after_first_user=first_only)
     elif candidate.source == "Claude" and candidate.kind == "child":
         from .parsers.claude import parse_claude
 
@@ -83,6 +87,10 @@ def load_session(source: str, path: Path, *, first_only: bool = False, resume: S
         from .parsers.omp import parse_omp
 
         return parse_omp(path, stop_after_first_user=first_only)
+    if source == "agy":
+        from .parsers.agy import parse_agy
+
+        return parse_agy(path, stop_after_first_user=first_only)
     from .parsers.claude import parse_claude
 
     return parse_claude(path, stop_after_first_user=first_only, resume=resume)
@@ -296,20 +304,33 @@ def session_record(session: Session) -> dict:
 
 # Sources whose titles are not in the session file. Such a title is attached
 # when an entry is made (`Entry.name`) and never stored with the parsed
-# session: it changes without the session file changing.
-TITLED_ELSEWHERE = ("Codex",)
+# session: it changes without the session file changing. Codex keeps them in
+# `session_index.jsonl`, agy in `conversation_summaries.db`.
+TITLED_ELSEWHERE = ("Codex", "agy")
 
 # Without an index: titles file -> ((size, mtime_ns) when read, its titles).
 _TITLES_READ: dict[str, tuple[tuple[int, int] | None, dict[str, str]]] = {}
 
 
 def file_stamp(location: str) -> tuple[int, int] | None:
-    """Size and mtime of a file, the two facts that say whether it changed; None when missing."""
+    """Size and mtime of a file, the two facts that say whether it changed; None when missing.
+
+    A SQLite database (agy's titles) may hold its latest writes in a `-wal`
+    file next to it: that file's size and mtime are folded in.
+    """
     try:
         stat = os.stat(location)
     except OSError:
         return None
-    return stat.st_size, stat.st_mtime_ns
+    size, mtime_ns = stat.st_size, stat.st_mtime_ns
+    if location.endswith(".db"):
+        try:
+            wal = os.stat(location + "-wal")
+        except OSError:
+            pass
+        else:
+            size, mtime_ns = size + wal.st_size, max(mtime_ns, wal.st_mtime_ns)
+    return size, mtime_ns
 
 
 def external_titles(location: str) -> dict[str, str]:
@@ -319,9 +340,9 @@ def external_titles(location: str) -> dict[str, str]:
     stamp = file_stamp(location)
     known = _TITLES_READ.get(location)
     if known is None or known[0] != stamp:
-        from .titles import read_codex_titles
+        from .titles import read_titles
 
-        known = _TITLES_READ[location] = (stamp, read_codex_titles(location) if stamp else {})
+        known = _TITLES_READ[location] = (stamp, read_titles(location) if stamp else {})
     return known[1]
 
 
@@ -359,6 +380,8 @@ def cache_path(home: Path) -> Path | None:
     else:
         base = Path(os.environ.get("XDG_CACHE_HOME") or Path.home() / ".cache").expanduser() / "find-session"
     claude_root, codex_root = roots(home)
+    # The agy root is not part of the name: adding it would have left every
+    # existing index behind under its old name.
     key = "\n".join(str(path.expanduser().resolve()) for path in [claude_root, codex_root, *omp_roots(home)])
     # Only a name for the file: every row is keyed by the full path of its
     # session file, so two sets of roots sharing a name would still be correct.

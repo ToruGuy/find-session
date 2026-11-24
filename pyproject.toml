@@ -9,7 +9,7 @@ build-backend = "setuptools.build_meta"
 # repository variable PYPI_PROJECT equals this name; to rename, change this one
 # line and the variable (see docs/RELEASING.md).
 name = "find-session-cli"
-description = "Search for agents over past Claude Code, Codex and omp conversations: results point at the messages to read"
+description = "Search for agents over past Claude Code, Codex, omp and Antigravity CLI conversations: results point at the messages to read"
 readme = "README.md"
 license = { text = "MIT" }
 requires-python = ">=3.9"

@@ -26,7 +26,8 @@ def resolve_selector(home: Path, selector: str) -> list[Candidate]:
         candidate
         for candidate in discover(home, include_children=True)
         if (source is None or candidate.source == source)
-        and (needle in candidate.session_id or needle in candidate.name)
+        # Every agy transcript has the same file name: only its id tells them apart.
+        and (needle in candidate.session_id or (candidate.source != "agy" and needle in candidate.name))
     ]
     if len(matches) <= 1:
         return matches
@@ -64,6 +65,12 @@ def children_of(home: Path, session: Session) -> list[str]:
     found: list[str] = []
     for candidate in discover(home, include_children=True):
         if candidate.source != session.source:
+            continue
+        if session.source == "agy":
+            # agy names the parent in its summaries database, read when parsing.
+            child = entry_for(candidate)
+            if child.kind == "child" and child.parent_id == session.session_id:
+                found.append(candidate.selector)
             continue
         if session.source != "Codex":
             # omp and Claude Code: the place of the file says whose subagent it is.

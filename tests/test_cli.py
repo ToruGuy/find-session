@@ -364,10 +364,12 @@ class BuildIndexTests(unittest.TestCase):
             with mock.patch.dict(os.environ, {"FIND_SESSION_CACHE": str(cache)}):
                 code, output = run_raw("--home", str(home), "build-index")
                 self.assertEqual(code, 0)
-                self.assertRegex(output, r"Index: 3 session files \(Claude 3, Codex 0, omp 0\), 3 parsed in \d+ s\n")
+                self.assertRegex(
+                    output, r"Index: 3 session files \(Claude 3, Codex 0, omp 0, agy 0\), 3 parsed in \d+ s\n"
+                )
                 self.assertEqual(len(list(cache.glob("index-*.sqlite3"))), 1)
                 code, output = run_raw("--home", str(home), "build-index")
-                self.assertIn("3 session files (Claude 3, Codex 0, omp 0), all up to date", output)
+                self.assertIn("3 session files (Claude 3, Codex 0, omp 0, agy 0), all up to date", output)
                 with mock.patch.object(index_module, "parse_candidate", side_effect=AssertionError("parsed again")):
                     code, output = run_raw("--home", str(home), "search", "BUILTTOPIC")
                 self.assertIn("Claude 3", output)
@@ -406,7 +408,7 @@ class BuildIndexTests(unittest.TestCase):
                         code, output = run_raw("--home", str(home), "build-index")
                 self.assertEqual(code, 0)
                 # The four sessions of the first run were kept; only the other two are parsed.
-                self.assertIn("6 session files (Claude 6, Codex 0, omp 0), 2 parsed", output)
+                self.assertIn("6 session files (Claude 6, Codex 0, omp 0, agy 0), 2 parsed", output)
 
     def test_what_was_parsed_is_written_when_time_has_passed(self):
         with tempfile.TemporaryDirectory() as tmp:

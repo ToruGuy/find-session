@@ -42,7 +42,7 @@ and how many more contain only some (`+1 partial`); a word that no session conta
 
 The first token of a row is the selector for `inspect`; ids are shortened to the shortest unique
 prefix of at least 8 characters. `title:` is the name the tool gave the session (Claude Code's
-generated or `/rename`d title, a Codex thread name, an omp title); a session without one shows
+generated or `/rename`d title, a Codex thread name, an omp or agy title); a session without one shows
 `first:`, its first user message. `hit A:B` is the stretch of messages where the words occur
 together; read it with `inspect … --range A:B`. The line quotes the message (or `command:`) of that
 stretch that has the most query words, cut around them; among messages with equally many, the one
@@ -60,14 +60,14 @@ first. It is left out of the ranking and the counts and gets one line under the 
 (`this session also matches: …`); `--include-current` ranks it like any other and `--json` has it
 under `current_session`. It is recognised by the id the tool exports to the commands it runs:
 `CLAUDE_CODE_SESSION_ID` (Claude Code; for a subagent that is its parent session) or
-`CODEX_THREAD_ID` / `CODEX_SESSION_ID` (Codex). No such variable is documented for omp, so under
-omp, in a plain terminal, or when both a Claude Code and a Codex id are set (one tool started from
+`CODEX_THREAD_ID` / `CODEX_SESSION_ID` (Codex). No such variable is documented for omp or agy, so under
+omp or agy, in a plain terminal, or when both a Claude Code and a Codex id are set (one tool started from
 inside the other), nothing is left out.
 
 ## Reading a conversation
 
 `inspect` accepts a full id, a unique part of one, or a prefixed selector (`claude:`, `codex:`,
-`omp:`; a Claude Code subagent by its agent id, an omp one as `omp:<id>/<Task>`). Messages are
+`omp:`, `agy:`; a Claude Code subagent by its agent id, an omp one as `omp:<id>/<Task>`). Messages are
 numbered and timed. The output is limited to about 20,000 characters (`--budget N`; 0 = no limit),
 what an agent's tool still shows inline instead of moving it to a file. A longer conversation keeps
 its first message and its most recent ones, and a `Next part:` line gives the call that prints the
@@ -100,22 +100,32 @@ at that command, but counts for a quarter of a word, so a long script that happe
 query words does not outrank the conversation about them.
 Commands that looked up the history itself (any call of this tool, reading session files) are
 skipped, so a session that only searched for a topic does not rank for it. Subagent sessions (of
-all three tools: for Claude Code the files under `<session>/subagents/`, with the task a subagent
-was given, what it said and ran, and its report) and Codex's automatic review threads are kept out
+all the tools: for Claude Code the files under `<session>/subagents/`, with the task a subagent
+was given, what it said and ran, and its report; for agy a conversation its summaries database
+gives a parent) and Codex's automatic review threads are kept out
 of the main rankings; a search says how many of them have all the words and `--children` ranks
 them. Context-compaction summaries are never presented as something the user said.
+
+Antigravity CLI (agy): each conversation's `brain/<id>/.system_generated/logs/transcript_full.jsonl`
+is read (`transcript.jsonl` when it is missing): the user's requests without the metadata agy wraps
+them in, the model's visible answers and the commands of its tool calls. Reasoning, tool output and
+harness reminders are skipped. The working directory, the title and the parent of a conversation
+come from agy's `conversation_summaries.db`, which is only read (as an immutable file while agy is
+not running, so nothing is created next to it). A changed title shows on the next search; the
+working directory is taken when the transcript is read.
 
 ## Configuration
 
 Nothing is required. Defaults read the history of the current user (`~/.claude`, `~/.codex`,
-`~/.omp`).
+`~/.omp`, `~/.gemini/antigravity-cli`).
 
 Environment variables:
 
 | Variable | Effect |
 | --- | --- |
-| `FIND_SESSION_HOME` | Directory that contains `.claude`, `.codex` and `.omp` (e.g. a copy synced from another machine). Same as `--home`. |
+| `FIND_SESSION_HOME` | Directory that contains `.claude`, `.codex`, `.omp` and `.gemini` (e.g. a copy synced from another machine). Same as `--home`. |
 | `CLAUDE_SESSIONS_ROOT`, `CODEX_SESSIONS_ROOT`, `OMP_SESSIONS_ROOT` | Point one source at an exact sessions directory. |
+| `AGY_SESSIONS_ROOT` | Antigravity CLI's data directory (the one holding `brain/` and `conversation_summaries.db`). |
 | `PI_CODING_AGENT_DIR`, `PI_CONFIG_DIR` | omp's own overrides, honoured the same way omp does. |
 | `FIND_SESSION_CACHE` | Directory of the index (default `$XDG_CACHE_HOME/find-session`, i.e. `~/.cache/find-session`), or `off` to parse everything on every run. Same as `--no-cache`. |
 | `FIND_SESSION_CONFIG` | Path of the config file (default `$XDG_CONFIG_HOME/find-session/config.json`, i.e. `~/.config/find-session/config.json`). |

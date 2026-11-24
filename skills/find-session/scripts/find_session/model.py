@@ -24,9 +24,9 @@ MAX_INSPECT_TOTAL = 20000
 
 MAX_AMBIGUOUS_LOAD = 50
 
-SOURCES = ("Claude", "Codex", "omp")
+SOURCES = ("Claude", "Codex", "omp", "agy")
 
-SOURCE_KEYS = {"claude": "Claude", "codex": "Codex", "omp": "omp"}
+SOURCE_KEYS = {"claude": "Claude", "codex": "Codex", "omp": "omp", "agy": "agy"}
 
 
 class Session:

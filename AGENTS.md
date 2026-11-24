@@ -5,8 +5,8 @@
 - `skills/find-session/` — the skill, self-contained (it must keep working when only this folder is copied):
   - `SKILL.md` — what agents read. Keep it in sync with every CLI or output change.
   - `scripts/sessions.py` — entry point; `scripts/find_session/` — the package (standard library only, Python 3.9+):
-    - `parsers/claude.py`, `parsers/codex.py`, `parsers/omp.py` — one parser per harness; each turns a session file into a `Session`.
-    - `model.py` (`Session`, `Candidate`), `jsonl.py`, `text.py`, `tools.py` (tool call → one searchable line), `redact.py` (secrets), `titles.py` (cleaning a title; Codex thread names).
+    - `parsers/claude.py`, `parsers/codex.py`, `parsers/omp.py`, `parsers/agy.py` (Antigravity CLI) — one parser per harness; each turns a session file into a `Session`.
+    - `model.py` (`Session`, `Candidate`), `jsonl.py`, `text.py`, `tools.py` (tool call → one searchable line), `redact.py` (secrets), `titles.py` (cleaning a title; Codex thread names; agy's summaries database).
     - `discovery.py` (where history lives), `lookup.py` (selectors, subagents).
     - `cache.py` (`Entry`: the few facts about a session that listing and ranking need, with the conversation loaded on demand; parsing), `index.py` (the SQLite index behind it), `searchtext.py` (`SearchText`: a session's text as stored and searched, folded to lower case without diacritics; `fold` and the whole-word rule for short words live there).
     - `ranking.py` (score and best stretch), `timefilter.py`, `search.py`, `transcript.py` (`inspect`), `recent.py`, `output.py`, `cli.py`.
@@ -28,7 +28,7 @@
 - Everything that compares a query word with text uses `searchtext.fold` on both sides and `find_word` (or `SearchText.whole_words` on stored bytes) for the word rule: scoring, the snippet, `inspect --grep`, the header counts. What is printed is never folded.
 - A session's `mtime` is the time of its last record (`cache.date_from_records`), not the file's. Whether a file changed is decided by the index from the file's own size and mtime, which are stored apart.
 - A Claude Code record whose `type` starts with `api-request` is a copy of what was sent to the model, not conversation: `parsers/claude.py` skips it.
-- A session's title is shown, never searched or scored: it stays out of `turns` and `SearchText`. A title kept outside the session file (Codex) is not stored with the parsed session either: the index keeps it in `titles`, keyed by the titles file, and rereads that file when its size or mtime changes.
+- A session's title is shown, never searched or scored: it stays out of `turns` and `SearchText`. A title kept outside the session file (Codex, agy) is not stored with the parsed session either: the index keeps it in `titles`, keyed by the titles file, and rereads that file when its size or mtime changes (for agy's SQLite database, together with its `-wal` file). agy's database is opened read-only, as an immutable file when no `-wal` exists, so reading it creates nothing in agy's directory.
 - The calling session (`search.calling_session`) is taken only from a variable a harness is known to export, and matched on source and exact id. Do not add a guess (recent files, process names): hiding another session is worse than listing the caller.
 - Fixtures must stay synthetic: never paste real session content, real paths, names, ids or hashes into tests. Secret-shaped test values are assembled at run time (`helpers.fake`).
 - A change to what a parser extracts needs a `PARSER_VERSION` bump in `cache.py`, and a change to the index tables or to `SearchText` an `INDEX_SCHEMA` bump in `index.py`, so indexes rebuild.

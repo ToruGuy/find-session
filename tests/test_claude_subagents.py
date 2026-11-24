@@ -127,7 +127,7 @@ class ClaudeSubagentTests(unittest.TestCase):
                 _, output = run_raw("--home", tmp, "search", word)
                 self.assertEqual(
                     output.splitlines()[0],
-                    f'search "{word}": no matches (Claude 0, Codex 0, omp 0); '
+                    f'search "{word}": no matches (Claude 0, Codex 0, omp 0, agy 0); '
                     f"{subagents} more in subagents (--children)",
                 )
             _, output = run_raw("--home", tmp, "search", "PANGOLIN", "--children")
@@ -216,7 +216,7 @@ class ClaudeSubagentTests(unittest.TestCase):
                 _, indexed = run_raw("--home", str(home), "search", "PANGOLIN QUOKKAREPORT", "--children", "--json")
                 _, built = run_raw("--home", str(home), "build-index")
             self.assertEqual(json.loads(indexed), json.loads(fresh))
-            self.assertIn("Index: 3 session files (Claude 3, Codex 0, omp 0), all up to date", built)
+            self.assertIn("Index: 3 session files (Claude 3, Codex 0, omp 0, agy 0), all up to date", built)
 
     def test_request_copies_are_dropped_however_they_are_written(self):
         def message(role: str, text: str, minute: int) -> str:

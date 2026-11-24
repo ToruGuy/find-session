@@ -208,7 +208,7 @@ class ParsingAndSearchTests(unittest.TestCase):
             self.assertIn("=== Claude — top 1 of 3 ===", output)
             self.assertIn("=== Codex — top 1 of 1 ===", output)
             self.assertIn("Session: codex-acme", output)
-            self.assertIn("always check Claude, Codex and omp", output)
+            self.assertIn("always check Claude, Codex, omp and agy", output)
 
     def test_search_source_filter_is_diagnostic_only(self):
         with tempfile.TemporaryDirectory() as tmp:

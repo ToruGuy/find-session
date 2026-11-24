@@ -13,10 +13,10 @@ per session file:
 - `checkpoints`: where the parser stopped, so that a file that has grown is
   read from there instead of from the start (see `cache.resumable`).
 
-Titles kept outside the session files (Codex thread names) have two tables of
-their own, `title_files` and `titles`: the titles file is read again when its
-size or mtime changes, and no session row depends on it, so a renamed thread
-costs one small file and no parsing.
+Titles kept outside the session files (Codex thread names, agy titles) have
+two tables of their own, `title_files` and `titles`: the titles file is read
+again when its size or mtime changes, and no session row depends on it, so a
+renamed thread costs one small file and no parsing.
 
 A row is valid while its file's size and mtime are unchanged; a changed, new
 or unknown file is parsed and its rows are replaced, one session at a time.
@@ -442,9 +442,9 @@ class SessionIndex:
         else:
             known = {}
             if stamp is not None:
-                from .titles import read_codex_titles
+                from .titles import read_titles
 
-                known = read_codex_titles(location)
+                known = read_titles(location)
             if stamp is not None or stored:
                 self.titles_read.add(location)
         self.title_sets[location] = known

@@ -52,7 +52,7 @@ class CompactOutputTests(unittest.TestCase):
             self.assertLess(len(compact), len(full) * 0.7)
             lines = compact.splitlines()
             self.assertEqual(
-                lines[0], 'search "invoice export": Claude 3, Codex 0, omp 0; 1 more in subagents (--children)'
+                lines[0], 'search "invoice export": Claude 3, Codex 0, omp 0, agy 0; 1 more in subagents (--children)'
             )
             # The helper path is printed once, not per result; no per-result resume or inspect lines.
             self.assertEqual(compact.count("sessions.py"), 1)
@@ -134,13 +134,13 @@ class CompactOutputTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             self.make_home(tmp)
             _, output = run_raw("--home", tmp, "search", "NOTHINGLIKETHIS")
-            self.assertEqual(output, 'search "NOTHINGLIKETHIS": no matches (Claude 0, Codex 0, omp 0)\n')
+            self.assertEqual(output, 'search "NOTHINGLIKETHIS": no matches (Claude 0, Codex 0, omp 0, agy 0)\n')
 
     def test_no_history_at_all_points_at_sources(self):
         with tempfile.TemporaryDirectory() as tmp:
             _, output = run_raw("--home", tmp, "search", "anything")
             first, second = output.splitlines()
-            self.assertEqual(first, 'search "anything": no matches (Claude 0, Codex 0, omp 0)')
+            self.assertEqual(first, 'search "anything": no matches (Claude 0, Codex 0, omp 0, agy 0)')
             self.assertRegex(second, r"^no session files found: `python3 \S+sessions\.py sources` shows where")
 
 
@@ -168,13 +168,14 @@ class MatchCountTests(unittest.TestCase):
             self.make_home(tmp)
             _, output = run_raw("--home", tmp, "search", "invoice export")
             self.assertEqual(
-                output.splitlines()[0], 'search "invoice export": Claude 2 (+1 partial), Codex 0 (+1 partial), omp 0'
+                output.splitlines()[0],
+                'search "invoice export": Claude 2 (+1 partial), Codex 0 (+1 partial), omp 0, agy 0',
             )
             # Every one of them is still listed, the complete ones first.
             self.assertIn("\nClaude\nclaude:both-", output)
             self.assertEqual(output.count("\nclaude:"), 3)
             _, full = run_raw("--home", tmp, "search", "invoice export", "--full")
-            self.assertIn("(Claude 2 (+1 partial), Codex 0 (+1 partial), omp 0)", full.splitlines()[0])
+            self.assertIn("(Claude 2 (+1 partial), Codex 0 (+1 partial), omp 0, agy 0)", full.splitlines()[0])
             _, limited = run_raw("--home", tmp, "search", "invoice export", "--limit", "1")
             self.assertIn("\nClaude (top 1 of 3)\n", limited)
 
@@ -182,9 +183,9 @@ class MatchCountTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             self.make_home(tmp)
             _, output = run_raw("--home", tmp, "search", "invoice")
-            self.assertEqual(output.splitlines()[0], 'search "invoice": Claude 3, Codex 0, omp 0')
+            self.assertEqual(output.splitlines()[0], 'search "invoice": Claude 3, Codex 0, omp 0, agy 0')
             _, output = run_raw("--home", tmp, "search", "staging deploy")
-            self.assertEqual(output.splitlines()[0], 'search "staging deploy": Claude 1, Codex 0, omp 0')
+            self.assertEqual(output.splitlines()[0], 'search "staging deploy": Claude 1, Codex 0, omp 0, agy 0')
 
     def test_a_word_no_session_has_is_named(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -192,14 +193,14 @@ class MatchCountTests(unittest.TestCase):
             _, output = run_raw("--home", tmp, "search", "invoice nonexistentword")
             self.assertEqual(
                 output.splitlines()[0],
-                'search "invoice nonexistentword": Claude 0 (+3 partial), Codex 0, omp 0; no session has: nonexistentword',
+                'search "invoice nonexistentword": Claude 0 (+3 partial), Codex 0, omp 0, agy 0; no session has: nonexistentword',
             )
             _, full = run_raw("--home", tmp, "search", "invoice nonexistentword", "--full")
             self.assertIn("\nNo session has: nonexistentword\n", full)
             # When nothing matches, every word is missing and the line says only that.
             _, output = run_raw("--home", tmp, "search", "nonexistentword otherabsentword")
             self.assertEqual(
-                output, 'search "nonexistentword otherabsentword": no matches (Claude 0, Codex 0, omp 0)\n'
+                output, 'search "nonexistentword otherabsentword": no matches (Claude 0, Codex 0, omp 0, agy 0)\n'
             )
 
     def test_json_keeps_counts_and_adds_the_complete_ones(self):
@@ -208,12 +209,12 @@ class MatchCountTests(unittest.TestCase):
             for leading in ((), ("--no-cache",)):
                 _, output = run_raw("--home", tmp, *leading, "search", "invoice export nonexistentword", "--json")
                 data = json.loads(output)
-                self.assertEqual(data["counts"], {"Claude": 3, "Codex": 1, "omp": 0})
-                self.assertEqual(data["counts_all_words"], {"Claude": 0, "Codex": 0, "omp": 0})
+                self.assertEqual(data["counts"], {"Claude": 3, "Codex": 1, "omp": 0, "agy": 0})
+                self.assertEqual(data["counts_all_words"], {"Claude": 0, "Codex": 0, "omp": 0, "agy": 0})
                 self.assertEqual(data["words_not_found"], ["nonexistentword"])
                 _, output = run_raw("--home", tmp, *leading, "search", "invoice export", "--json")
                 data = json.loads(output)
-                self.assertEqual(data["counts_all_words"], {"Claude": 2, "Codex": 0, "omp": 0})
+                self.assertEqual(data["counts_all_words"], {"Claude": 2, "Codex": 0, "omp": 0, "agy": 0})
                 self.assertEqual(data["words_not_found"], [])
                 modified = data["results"]["Claude"][0]["modified"]
                 self.assertRegex(modified, r"^\d{4}-\d\d-\d\dT\d\d:\d\d[+-]\d\d:\d\d$")

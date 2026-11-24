@@ -27,6 +27,7 @@ for _name in (
     "CLAUDE_SESSIONS_ROOT",
     "CODEX_SESSIONS_ROOT",
     "OMP_SESSIONS_ROOT",
+    "AGY_SESSIONS_ROOT",
     "PI_CODING_AGENT_DIR",
     "PI_CONFIG_DIR",
     # The tests may be run by an agent: its own session must not count as the caller.
@@ -438,3 +439,85 @@ def make_omp_home(tmp: str) -> Path:
         [omp_header("advisor"), omp_msg("u1", None, "user", "ADVISOR CHILDTOPIC")],
     )
     return home
+
+
+AGY_ROOT = ".gemini/antigravity-cli"
+
+AGY_COLUMNS = (
+    "conversation_id text PRIMARY KEY, title text NOT NULL DEFAULT '', preview text NOT NULL DEFAULT '', "
+    "workspace_uris text NOT NULL, parent_conversation_id text NOT NULL DEFAULT '', "
+    "nesting_depth integer NOT NULL DEFAULT 0"
+)
+
+
+def agy_step(index: int, step_type: str, source: str = "MODEL", **fields) -> dict:
+    """One line of an agy transcript; times are one second apart."""
+    return {
+        "step_index": index,
+        "source": source,
+        "type": step_type,
+        "status": "DONE",
+        "created_at": f"2026-09-22T10:00:{index:02d}Z",
+        **fields,
+    }
+
+
+def agy_request(index: int, text: str, source: str = "USER_EXPLICIT") -> dict:
+    """A USER_INPUT step, wrapped the way agy wraps the user's words."""
+    content = (
+        f"<USER_REQUEST>\n{text}\n</USER_REQUEST>\n"
+        "<ADDITIONAL_METADATA>\nSYNTH_METADATA local time\n</ADDITIONAL_METADATA>\n"
+        "<USER_SETTINGS_CHANGE>\nSYNTH_SETTINGS model changed\n</USER_SETTINGS_CHANGE>"
+    )
+    return agy_step(index, "USER_INPUT", source, content=content)
+
+
+def agy_summaries(home: Path, *rows: tuple[str, str, str, str]) -> Path:
+    """agy's conversation_summaries.db with (id, title, working directory, parent id) rows."""
+    import sqlite3
+
+    path = home / AGY_ROOT / "conversation_summaries.db"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    db = sqlite3.connect(path)
+    with db:
+        db.execute(f"CREATE TABLE IF NOT EXISTS conversation_summaries ({AGY_COLUMNS})")
+        for conversation_id, title, cwd, parent in rows:
+            db.execute(
+                "INSERT OR REPLACE INTO conversation_summaries "
+                "(conversation_id, title, workspace_uris, parent_conversation_id) VALUES (?, ?, ?, ?)",
+                (conversation_id, title, json.dumps([f"file://{cwd}"] if cwd else []), parent),
+            )
+    db.close()
+    return path
+
+
+def write_agy(home: Path, conversation_id: str, steps: list[dict], name: str = "transcript_full.jsonl") -> Path:
+    path = home / AGY_ROOT / "brain" / conversation_id / ".system_generated" / "logs" / name
+    write_jsonl(path, steps)
+    return path
+
+
+def agy_main_steps() -> list[dict]:
+    """A synthetic agy conversation: a request, reasoning, tool calls, their output and a reminder."""
+    return [
+        agy_request(0, "Plan the AGYTOPIC rollout"),
+        agy_step(
+            1,
+            "PLANNER_RESPONSE",
+            model="synthetic-model",
+            thinking="SYNTH_REASONING",
+            tool_calls=[
+                {"name": "read_file", "args": {"Path": "/Users/alex/projects/demo/AGYREADFILE.md"}},
+                {
+                    "name": "run_command",
+                    "args": {"CommandLine": "AGYCMD --check", "WaitMsBeforeAsync": 5000, "toolSummary": "check"},
+                },
+                {"name": "write_to_file", "args": {"TargetFile": "/tmp/AGYWRITTEN.txt", "CodeContent": "SYNTH_BODY"}},
+            ],
+        ),
+        agy_step(2, "GENERIC", content="Created At: now\nShowing lines 1-5 of 5\nSYNTH_TOOL_OUTPUT"),
+        agy_step(3, "SYSTEM_MESSAGE", "SYSTEM", content="<SYSTEM_MESSAGE>SYNTH_REMINDER</SYSTEM_MESSAGE>"),
+        agy_step(
+            4, "PLANNER_RESPONSE", model="synthetic-model", thinking="SYNTH_REASONING", content="Rollout planned."
+        ),
+    ]

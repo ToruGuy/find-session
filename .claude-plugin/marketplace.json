@@ -1,6 +1,6 @@
 {
   "name": "find-session",
-  "description": "find-session: your agent searches past Claude Code, Codex and omp conversations itself.",
+  "description": "find-session: your agent searches past Claude Code, Codex, omp and Antigravity CLI conversations itself.",
   "owner": {
     "name": "ToruAI"
   },
@@ -8,7 +8,7 @@
     {
       "name": "find-session",
       "source": "./",
-      "description": "Lets your agent search past Claude Code, Codex and omp conversations itself and read back only the messages that matter."
+      "description": "Lets your agent search past Claude Code, Codex, omp and Antigravity CLI conversations itself and read back only the messages that matter."
     }
   ]
 }

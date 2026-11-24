@@ -301,7 +301,7 @@ class DocumentedOutputTests(unittest.TestCase):
         ):
             self.assertIn(promise, readme)
 
-    def test_one_line_descriptions_name_the_three_tools(self):
+    def test_one_line_descriptions_name_the_tools(self):
         plugin = json.loads((REPO / ".claude-plugin" / "plugin.json").read_text())
         market = json.loads((REPO / ".claude-plugin" / "marketplace.json").read_text())
         package = json.loads((REPO / "package.json").read_text())
@@ -316,7 +316,7 @@ class DocumentedOutputTests(unittest.TestCase):
             "SKILL.md": skill,
         }
         for name, description in descriptions.items():
-            for tool in ("Claude Code", "Codex", "omp"):
+            for tool in ("Claude Code", "Codex", "omp", "Antigravity CLI"):
                 self.assertIn(tool, description, name)
         # The phrases that make an agent load the skill.
         for trigger in (

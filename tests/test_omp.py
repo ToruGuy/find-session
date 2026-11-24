@@ -171,7 +171,7 @@ class OmpHistoryTests(unittest.TestCase):
 
             code, output = self.run_cli("--home", tmp, "search", "PILOTTOPIC", "--json")
             payload = json.loads(output)
-            self.assertEqual(payload["counts"], {"Claude": 3, "Codex": 0, "omp": 1})
+            self.assertEqual(payload["counts"], {"Claude": 3, "Codex": 0, "omp": 1, "agy": 0})
             omp_rows = payload["results"]["omp"]
             self.assertEqual(omp_rows[0]["selector"], "omp:omp-main-1")
             self.assertEqual(omp_rows[0]["kind"], "main")

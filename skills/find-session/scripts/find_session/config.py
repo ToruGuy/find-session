@@ -42,7 +42,7 @@ def load_config() -> dict:
     """Optional per-machine settings; a missing or broken file means defaults.
 
     Keys (all optional):
-      home          directory holding .claude/.codex/.omp (e.g. a synced mirror)
+      home          directory holding .claude/.codex/.omp/.gemini (e.g. a synced mirror)
       resume_label  label of the resume hint line (default "Resume")
       hints         extra lines printed under each search result:
                     [{"label": "...", "command": "... {selector} ..."}]
@@ -65,7 +65,7 @@ def load_config() -> dict:
 
 
 def default_home(config: dict | None = None) -> Path:
-    """Base directory holding .claude, .codex and .omp: env, config, then ~."""
+    """Base directory holding .claude, .codex, .omp and .gemini: env, config, then ~."""
     configured = os.environ.get("FIND_SESSION_HOME")
     if configured:
         return Path(configured).expanduser()

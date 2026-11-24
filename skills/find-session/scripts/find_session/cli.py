@@ -67,7 +67,7 @@ def program_name() -> str:
 def parser() -> argparse.ArgumentParser:
     root = argparse.ArgumentParser(
         prog=program_name(),
-        description="Search past Claude Code, Codex and omp conversations, and read one back.",
+        description="Search past Claude Code, Codex, omp and Antigravity CLI (agy) conversations, and read one back.",
         epilog="Words are matched without regard to case or diacritics; a session with any of them is listed and "
         "the more of them it has close together, the higher it ranks. Run `%(prog)s COMMAND --help` for a "
         "command's options.",
@@ -77,7 +77,7 @@ def parser() -> argparse.ArgumentParser:
         "--home",
         type=Path,
         default=None,
-        help="directory holding .claude, .codex and .omp (default: $FIND_SESSION_HOME, config 'home', then ~)",
+        help="directory holding .claude, .codex, .omp and .gemini (default: $FIND_SESSION_HOME, config 'home', then ~)",
     )
     root.add_argument(
         "--no-cache",
@@ -91,7 +91,7 @@ def parser() -> argparse.ArgumentParser:
     search = commands.add_parser(
         "search",
         help="rank sessions for a query, separately per tool",
-        description="Rank sessions for a query, separately for Claude Code, Codex and omp. A session is listed "
+        description="Rank sessions for a query, separately for Claude Code, Codex, omp and agy. A session is listed "
         "when it has at least one of the words; one that has more of them, close together, ranks higher. "
         "Case and diacritics are ignored. In what was said a word is found anywhere, also inside a longer "
         "word; in a command only where a word starts; a word of up to three characters only as a whole word. "
@@ -113,7 +113,7 @@ def parser() -> argparse.ArgumentParser:
     search.add_argument(
         "--source",
         type=str.lower,
-        choices=("all", "claude", "codex", "omp"),
+        choices=("all", "claude", "codex", "omp", "agy"),
         default="all",
         help="only this tool's sessions (default: all, each ranked separately)",
     )
@@ -160,7 +160,7 @@ def parser() -> argparse.ArgumentParser:
     inspect.add_argument(
         "session_id",
         metavar="SELECTOR",
-        help="as printed by search: claude:<id>, codex:<id> or omp:<id> (a unique part of the id is enough)",
+        help="as printed by search: claude:<id>, codex:<id>, omp:<id> or agy:<id> (a unique part of the id is enough)",
     )
     inspect.add_argument("--json", action="store_true", help="machine-readable output")
     inspect.add_argument("--tail", type=int, metavar="N", help="only the last N messages")
