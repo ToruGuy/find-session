@@ -250,7 +250,9 @@ class TitleOutputTests(TitleCase):
         _, output = run_raw("--home", str(self.home), "inspect", "claude:untitled", "--json")
         self.assertIsNone(json.loads(output)["title"])
         _, listing = run_raw("--home", str(self.home), "index")
-        self.assertEqual(listing.splitlines()[0], "index: 3 sessions, newest first (in all: Claude 2, Codex 1, omp 0)")
+        self.assertEqual(
+            listing.splitlines()[0], "index: 3 sessions, newest first (in all: Claude 2, Codex 1, omp 0, agy 0)"
+        )
         self.assertRegex(listing, r"\nclaude:named [\d-]+ [\d:]+ ~/work · 2 msgs · Migration plan\n")
         self.assertRegex(listing, r"\nclaude:untitled [\d-]+ [\d:]+ ~/work · 2 msgs · Plan the TITLETOPIC migration\n")
         self.assertRegex(listing, r"\ncodex:thread-n\S* [\d-]+ [\d:]+ \S+ · \d+ msgs · Rollout review\n")
@@ -299,7 +301,7 @@ class TitleRankingTests(TitleCase):
             self.assertEqual(records["titled"]["score"], records["plain"]["score"], leading)
             self.assertEqual(records["titled"]["chunk"], records["plain"]["chunk"], leading)
             _, output = run_raw("--home", str(self.home), *leading, "search", "ONLYINTITLE")
-            self.assertEqual(output, 'search "ONLYINTITLE": no matches (Claude 0, Codex 0, omp 0)\n', leading)
+            self.assertEqual(output, 'search "ONLYINTITLE": no matches (Claude 0, Codex 0, omp 0, agy 0)\n', leading)
             _, output = run_raw("--home", str(self.home), *leading, "inspect", "claude:titled", "--grep", "ONLYINTITLE")
             self.assertIn("(no messages match this selection)", output, leading)
 

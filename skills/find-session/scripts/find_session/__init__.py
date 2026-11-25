@@ -1,4 +1,4 @@
-"""find-session: search past Claude Code, Codex and omp (oh-my-pi) conversations.
+"""find-session: search past Claude Code, Codex, omp (oh-my-pi) and Antigravity CLI (agy) conversations.
 
 Only conversation text and the commands of tool calls are extracted. Tool output,
 reasoning, injected context and anything that looks like a secret are never

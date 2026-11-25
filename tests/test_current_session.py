@@ -88,7 +88,7 @@ class CallerDetectionTests(unittest.TestCase):
 class CurrentSessionTests(CurrentSessionCase):
     def test_without_a_caller_nothing_changes(self):
         plain = self.run_search()
-        self.assertIn('search "CALLERTOPIC rollout": Claude 2, Codex 2, omp 0\n', plain)
+        self.assertIn('search "CALLERTOPIC rollout": Claude 2, Codex 2, omp 0, agy 0\n', plain)
         self.assertNotIn("this session", plain)
         # The caller ranks first: that is the problem.
         self.assertLess(plain.index("claude:0b7c2f1e-a "), plain.index("claude:0b7c2f1e-b "))
@@ -103,7 +103,7 @@ class CurrentSessionTests(CurrentSessionCase):
     def test_caller_is_left_out_and_gets_one_line(self):
         output = self.run_search(env=claude_env())
         lines = output.splitlines()
-        self.assertEqual(lines[0], 'search "CALLERTOPIC rollout": Claude 1, Codex 2, omp 0')
+        self.assertEqual(lines[0], 'search "CALLERTOPIC rollout": Claude 1, Codex 2, omp 0, agy 0')
         self.assertNotIn("claude:0b7c2f1e-a 20", output)
         self.assertIn("claude:0b7c2f1e-b ", output)
         # The Codex session with the same id is another session and stays.
@@ -127,7 +127,7 @@ class CurrentSessionTests(CurrentSessionCase):
         output = self.run_search(env=claude_env(), query="searching")
         self.assertEqual(
             output,
-            'search "searching": no matches (Claude 0, Codex 0, omp 0)\n'
+            'search "searching": no matches (Claude 0, Codex 0, omp 0, agy 0)\n'
             "this session also matches: claude:0b7c2f1e-a hit 1:3\n",
         )
 
@@ -138,7 +138,7 @@ class CurrentSessionTests(CurrentSessionCase):
 
     def test_full_output(self):
         output = self.run_search("--full", env=claude_env())
-        self.assertIn("(Claude 1, Codex 2, omp 0)", output)
+        self.assertIn("(Claude 1, Codex 2, omp 0, agy 0)", output)
         self.assertNotIn(f"Session: {CALLER}\nStart: Find where", output)
         self.assertIn(f"Session: {OTHER}", output)
         self.assertEqual(
@@ -152,7 +152,7 @@ class CurrentSessionTests(CurrentSessionCase):
         [first, second] = plain["results"]["Claude"]
         self.assertEqual(first["session_id"], CALLER)
         payload = json.loads(self.run_search("--json", env=claude_env()))
-        self.assertEqual(payload["counts"], {"Claude": 1, "Codex": 2, "omp": 0})
+        self.assertEqual(payload["counts"], {"Claude": 1, "Codex": 2, "omp": 0, "agy": 0})
         self.assertEqual(payload["results"]["Claude"], [second])
         self.assertEqual(payload["results"]["Codex"], plain["results"]["Codex"])
         # The same record it had in the ranking, under a key of its own.
@@ -164,7 +164,9 @@ class CurrentSessionTests(CurrentSessionCase):
     def test_codex_caller_is_matched_by_the_id_inside_the_file(self):
         for name in ("CODEX_THREAD_ID", "CODEX_SESSION_ID"):
             output = self.run_search(env={name: THREAD})
-            self.assertEqual(output.splitlines()[0], 'search "CALLERTOPIC rollout": Claude 2, Codex 1, omp 0', name)
+            self.assertEqual(
+                output.splitlines()[0], 'search "CALLERTOPIC rollout": Claude 2, Codex 1, omp 0, agy 0', name
+            )
             self.assertEqual(output.splitlines()[-1], f"this session also matches: codex:{THREAD[:8]} hit 1:2", name)
             # The Claude session that would be the caller under Claude Code is listed.
             self.assertIn("claude:0b7c2f1e-a ", output)
@@ -182,11 +184,11 @@ class CurrentSessionTests(CurrentSessionCase):
         self.assertIn("; 1 more in subagents (--children)", self.run_search())
         # Its own session is neither counted among the hidden ones nor pointed at; its parent stays listed.
         output = self.run_search(env={"CODEX_THREAD_ID": "child-thread"})
-        self.assertEqual(output.splitlines()[0], 'search "CALLERTOPIC rollout": Claude 2, Codex 2, omp 0')
+        self.assertEqual(output.splitlines()[0], 'search "CALLERTOPIC rollout": Claude 2, Codex 2, omp 0, agy 0')
         self.assertNotIn("this session", output)
         self.assertIn(f"codex:{THREAD[:8]} ", output)
         output = self.run_search("--children", env={"CODEX_THREAD_ID": "child-thread"})
-        self.assertIn("Claude 2, Codex 2, omp 0, subagents 0", output)
+        self.assertIn("Claude 2, Codex 2, omp 0, agy 0, subagents 0", output)
         self.assertEqual(output.splitlines()[-1], "this session also matches: codex:child-th hit 1:2")
 
     def test_same_with_the_index_and_no_conversation_is_read_for_the_line(self):

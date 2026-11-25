@@ -35,7 +35,7 @@ class IndexCommandTests(unittest.TestCase):
             self.assertEqual(code, 0)
             self.assertEqual(
                 lines[0],
-                "index: the newest 50 of 130 sessions (in all: Claude 130, Codex 0, omp 0); "
+                "index: the newest 50 of 130 sessions (in all: Claude 130, Codex 0, omp 0, agy 0); "
                 "--limit N lists more (0 = all), --since WHEN a period",
             )
             self.assertEqual(len(lines), 1 + recent.INDEX_LIMIT)
@@ -58,7 +58,7 @@ class IndexCommandTests(unittest.TestCase):
             _, output = run_raw("--home", str(home), "index", "--limit", "0")
             self.assertEqual(len(output.splitlines()), 131)
             self.assertEqual(
-                output.splitlines()[0], "index: 130 sessions, newest first (in all: Claude 130, Codex 0, omp 0)"
+                output.splitlines()[0], "index: 130 sessions, newest first (in all: Claude 130, Codex 0, omp 0, agy 0)"
             )
             _, output = run_raw("--home", str(home), "index", "--since", "2026-08-06 05:00", "--limit", "0")
             self.assertIn("sessions since 2026-08-06 05:00, newest first", output.splitlines()[0])
@@ -78,7 +78,7 @@ class IndexCommandTests(unittest.TestCase):
             write_jsonl(home / ".claude/projects/-Users-alex-work/full.jsonl", claude_turns("Hello", "Hi."))
             _, output = run_raw("--home", tmp, "index")
             self.assertEqual(
-                output.splitlines()[0], "index: 1 session, newest first (in all: Claude 1, Codex 0, omp 0)"
+                output.splitlines()[0], "index: 1 session, newest first (in all: Claude 1, Codex 0, omp 0, agy 0)"
             )
             self.assertNotIn("claude:empty", output)
 
@@ -101,7 +101,9 @@ class RecentCommandTests(unittest.TestCase):
             )
             code, output = run_raw("--home", tmp, "recent", "--hours", "1000000")
             self.assertEqual(code, 0)
-            self.assertIn("(Claude Code + Codex + omp): the newest 20 of 46 sessions (--limit N for more)", output)
+            self.assertIn(
+                "(Claude Code + Codex + omp + agy): the newest 20 of 46 sessions (--limit N for more)", output
+            )
             self.assertEqual(output.count("\n### "), 20)
             # Each text is cut at a word, with an ellipsis: nothing is printed at full length.
             for line in output.splitlines():
@@ -162,7 +164,7 @@ class SourcesCommandTests(unittest.TestCase):
                 _, listing = run_raw("--home", str(home), "index")
                 _, after = run_raw("--home", str(home), "sources")
             self.assertEqual(before, after)
-            self.assertIn("(in all: Claude 1, Codex 2, omp 0)", listing)
+            self.assertIn("(in all: Claude 1, Codex 2, omp 0, agy 0)", listing)
 
     def test_config_line_says_when_there_is_none(self):
         with tempfile.TemporaryDirectory() as tmp:

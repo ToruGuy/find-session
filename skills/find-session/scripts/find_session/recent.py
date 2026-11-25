@@ -10,7 +10,7 @@ from pathlib import Path
 
 from .cache import Entry, entries, latest_copies, note_present
 from .config import config_path
-from .discovery import discover, omp_roots, roots
+from .discovery import agy_root, discover, omp_roots, roots
 from .model import MAX_ASSISTANT_BRIEF, MAX_USER_BRIEF, SOURCES, Candidate, Session
 from .text import compact_text
 
@@ -131,7 +131,7 @@ def build_recent(
     print(f"# Recent activity, collected {datetime.now():%Y-%m-%d %H:%M}")
     sessions, total = recent_sessions(home, hours, limit)
     more = f": the newest {len(sessions)} of {total} sessions (--limit N for more)" if total > len(sessions) else ""
-    print(f"\n## Last {hours}h (Claude Code + Codex + omp){more}")
+    print(f"\n## Last {hours}h (Claude Code + Codex + omp + agy){more}")
     if not sessions:
         print("\n(no sessions in this window)")
     for session in sessions:
@@ -194,6 +194,14 @@ def codex_kind_of(candidate: Candidate) -> str:
     return "main"
 
 
+def agy_kind_of(candidate: Candidate) -> str:
+    """main or child for an agy conversation: agy names a subagent's parent in its summaries database."""
+    from .titles import agy_summaries
+
+    summary = agy_summaries(candidate.titles).get(candidate.session_id)
+    return "child" if summary and summary[2] else "main"
+
+
 def counted(number: int, noun: str) -> str:
     return f"{number} {noun}" if number == 1 else f"{number} {noun}s"
 
@@ -203,13 +211,19 @@ def describe_sources(home: Path, *, as_json: bool = False) -> int:
     claude_root, codex_root = roots(home)
     kinds = {source: {"main": 0, "child": 0, "review": 0} for source in SOURCES}
     for candidate in discover(home, include_children=True):
-        kind = codex_kind_of(candidate) if candidate.source == "Codex" else candidate.kind
+        if candidate.source == "Codex":
+            kind = codex_kind_of(candidate)
+        elif candidate.source == "agy":
+            kind = agy_kind_of(candidate)
+        else:
+            kind = candidate.kind
         kinds[candidate.source][kind] += 1
     report: dict[str, dict] = {}
     for source, source_roots in (
         ("Claude", [claude_root]),
         ("Codex", [codex_root]),
         ("omp", omp_roots(home)),
+        ("agy", [agy_root(home)]),
     ):
         report[source] = {
             "roots": [{"path": str(root), "exists": root.is_dir()} for root in source_roots],

@@ -52,6 +52,40 @@ def omp_roots(home: Path | None = None) -> list[Path]:
 CODEX_TITLES = "session_index.jsonl"
 
 
+def agy_root(home: Path | None = None) -> Path:
+    """Antigravity CLI's data root; AGY_SESSIONS_ROOT replaces it (mirrors, tests)."""
+    override = os.environ.get("AGY_SESSIONS_ROOT")
+    if override:
+        return Path(override).expanduser()
+    return (home or default_home()) / ".gemini/antigravity-cli"
+
+
+# Where agy keeps a conversation's transcript below its data root:
+# brain/<conversation id>/.system_generated/logs/, the full transcript
+# preferred over the shortened one (see `parsers/agy.py`).
+AGY_BRAIN = "brain"
+AGY_LOGS = ".system_generated/logs"
+AGY_TRANSCRIPTS = ("transcript_full.jsonl", "transcript.jsonl")
+AGY_SUMMARIES = "conversation_summaries.db"
+
+
+def agy_files(root: Path) -> list[Candidate]:
+    """One transcript per agy conversation; a conversation that never ran has none."""
+    base = _base(root) + AGY_BRAIN
+    titles = _base(root) + AGY_SUMMARIES
+    found: list[Candidate] = []
+    for name in sorted(entry.name for entry in _listing(base)):
+        logs = f"{base}/{name}/{AGY_LOGS}/"
+        for transcript in AGY_TRANSCRIPTS:
+            try:
+                stat = os.stat(logs + transcript)
+            except OSError:
+                continue
+            found.append(Candidate("agy", logs + transcript, name, stat=stat, titles=titles))
+            break
+    return found
+
+
 def discover(home: Path | None = None, *, include_children: bool = False) -> list[Candidate]:
     """All session files, each attributed to exactly one source."""
     claude_root, codex_root = roots(home)
@@ -76,6 +110,8 @@ def discover(home: Path | None = None, *, include_children: bool = False) -> lis
             if key not in seen:
                 seen.add(key)
                 found.append(candidate)
+    # Whether an agy conversation is a subagent is known only once it is parsed, as for Codex.
+    found.extend(agy_files(agy_root(home)))
     return found
 
 

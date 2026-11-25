@@ -166,7 +166,7 @@ def session_selector(session: Session) -> str:
 def resume_command(session: Session) -> str:
     """Ready-to-run resume command; empty for subagents and review threads.
 
-    Claude Code (and omp) look sessions up per project directory, so the
+    Claude Code (and omp, agy) look sessions up per project directory, so the
     command changes into the recorded working directory first when known.
     """
     if session.kind != "main":
@@ -175,6 +175,8 @@ def resume_command(session: Session) -> str:
         command = f"codex resume {session.session_id}"
     elif session.source == "omp":
         command = f"omp --resume {session.session_id}"
+    elif session.source == "agy":
+        command = f"agy --conversation {session.session_id}"
     else:
         command = f"claude --resume {session.session_id}"
     if session.cwd:

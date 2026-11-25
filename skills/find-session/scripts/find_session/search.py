@@ -25,7 +25,7 @@ CHILDREN_SECTION = "subagents"
 # the command was run from. Claude Code: a subagent gets its parent's id, and
 # the parent is the session that is listed. Codex: both names carry the thread
 # id; the first one that is set is used. No such variable is documented for
-# omp, so none is used there.
+# omp or agy, so none is used there.
 CALLER_VARIABLES = (
     ("Claude", ("CLAUDE_CODE_SESSION_ID",)),
     ("Codex", ("CODEX_THREAD_ID", "CODEX_SESSION_ID")),
@@ -52,7 +52,7 @@ def calling_session() -> tuple[str, str] | None:
 
 
 def count_text(sections: list[str], totals: dict[str, int], complete: dict[str, int]) -> str:
-    """`Claude 4 (+31 partial), Codex 1, omp 0`: sessions with every query word,
+    """`Claude 4 (+31 partial), Codex 1, omp 0, agy 0`: sessions with every query word,
     and how many more have only some of them (left out when there are none)."""
     parts = []
     for name in sections:
@@ -245,7 +245,7 @@ def search_sessions(
             f"Also {hidden_children} subagent or review session(s) containing all the words, not shown: add --children."
         )
     if source_filter == "all":
-        print("Results are ranked per source: always check Claude, Codex and omp before drawing conclusions.")
+        print("Results are ranked per source: always check Claude, Codex, omp and agy before drawing conclusions.")
 
     for name in sections:
         print(f"\n=== {name} — top {min(limit, totals[name])} of {totals[name]} ===")

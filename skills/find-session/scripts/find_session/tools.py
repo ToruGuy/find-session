@@ -104,7 +104,7 @@ HISTORY_LOOKUP = re.compile(
     rf"\bsessions\.py\b[\s\S]*?\b{_LOOKUP_COMMANDS}"
     rf"|(?<![\w.-])find-session(?:@[\w.-]+)?[\"']?{_LOOKUP_OPTIONS}{_LOOKUP_COMMANDS}"
     rf"|-m\s+find_session{_LOOKUP_OPTIONS}{_LOOKUP_COMMANDS}"
-    r"|\.claude/projects|\.codex/sessions|\.omp/agent/sessions"
+    r"|\.claude/projects|\.codex/sessions|\.omp/agent/sessions|\.gemini/antigravity-cli"
 )
 
 PATCH_FILE = re.compile(r"^\*\*\* (?:Add|Update|Delete) File: (.+)$", re.M)
