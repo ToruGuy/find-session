@@ -4,6 +4,8 @@ All notable changes to this project. Format: [Keep a Changelog](https://keepacha
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-11-25
+
 ### Added
 - **Antigravity CLI (`agy`) is a fourth source.** Its conversations (`~/.gemini/antigravity-cli/brain/<id>/…/transcript_full.jsonl`) are searched and ranked in their own `agy` section, read with `inspect agy:<id>`, limited with `--source agy`, and resumed with `agy --conversation <id>` in the conversation's workspace. Indexed: the user's requests (without the metadata agy adds), the model's visible answers and the commands of its tool calls; never reasoning, tool output or harness reminders. Working directory, title and parent come from agy's `conversation_summaries.db`, opened read-only; a conversation with a parent is a subagent. `AGY_SESSIONS_ROOT` points at another data directory. Search headers now count `agy` too (`…, omp 0, agy 0`).
 - The skill folder carries its own `LICENSE`, so a copy installed by `npx`, the plugin or `npx skills add` includes it.

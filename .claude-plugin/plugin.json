@@ -1,6 +1,6 @@
 {
   "name": "find-session",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "Lets your agent search past Claude Code, Codex, omp and Antigravity CLI conversations itself and read back only the messages that matter.",
   "author": {
     "name": "ToruAI"
